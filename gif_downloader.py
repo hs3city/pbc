@@ -28,7 +28,9 @@ class GifDownloader(object):
         # TODO: this should be replaced with API call when site supports it.
         """
         results = []
-        r = requests.get(self.config['default']['pankreator_site'])
+        logger.info("Connecting to {}".format(self.config['default']['pankreator_site']))
+        r = requests.get(self.config['default']['pankreator_site'], verify=False)
+        logger.info("Connected to {}".format(self.config['default']['pankreator_site']))
         soup = BeautifulSoup(r.text, 'lxml')
         posts = [a for a in soup.findAll('div', attrs={'class': 'span2'})]
         for p in posts:
@@ -40,6 +42,19 @@ class GifDownloader(object):
                                       figure.a.img['src'])
             post['url'] = urljoin(self.config['default']['pankreator_site'],
                                   figure.a['href'])
+            results.append(post)
+        return results
+
+    def extract_data_from_api(self):
+        results = []
+        response = requests.get("http://pankreator.org/wp-json/pankreator/postcards?filter[per_page]=100&page=1")
+        for card in response.json():
+            post = {}
+            post['title'] = card['title']['rendered']
+            if card['better_featured_image'] is None:
+                continue
+            post['gif_url'] = card['better_featured_image']['source_url']
+            post['url'] = card['link']
             results.append(post)
         return results
 
@@ -57,7 +72,8 @@ class GifDownloader(object):
         """
         Something that was found on the site, but wasn't added to the db yet.
         """
-        results = self.extract_data_from_page()
+        #results = self.extract_data_from_page()
+        results = self.extract_data_from_api()
         if not results:
             return None, None
         with db_connection(self.db) as cursor:
@@ -69,6 +85,6 @@ class GifDownloader(object):
                 for item in results:
                     if item['gif_url'] in differences:
                         new_item = item
-                        logger.info('Something new! %s' % new_item['title'])
+                        logger.info('Something new! %s' % new_item['title'].decode('utf-8'))
                         return self.download_image(new_item['gif_url']), new_item
         return None, None

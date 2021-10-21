@@ -81,6 +81,7 @@ class PANkreator(object):
             # If gif wasn't added yesterday, add one.
             yesterday = date.today() - relativedelta(days=+1)
             if (not last_record) or (last_record[4] < yesterday):
+                logger.info("Getting some gifs!")
                 media_file_path, result = self.get_gif()
                 if media_file_path and result:
                     query = 'insert into pankreator_gifs (title, url, gif_url, date_added)'\
@@ -88,6 +89,7 @@ class PANkreator(object):
                     cursor.execute(query, (result['title'], result['url'], result['gif_url'], date.today()))
                     return media_file_path, '%s %s' % (result['title'],  result['url'])
 
+            logger.info("Getting some djvu!")
             media_file_path, title = self.get_djvu()
 
         return media_file_path, title
@@ -95,6 +97,7 @@ class PANkreator(object):
     def main(self, tries=0):
 
         try:
+            logger.info("Choosing content")
             media_file_path, title = self.choose_content()
 
             if not media_file_path:
